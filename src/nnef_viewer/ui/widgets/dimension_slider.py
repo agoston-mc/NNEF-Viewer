@@ -1,5 +1,5 @@
 # Copyright (c) 2026
-# Dynamic Axis Mapping & Dimension Scrubbing Controls for N-D Tensors.
+# Dynamic Axis Mapping & Dimension Scrubbing Controls for N-D Tensors (Sleek & Compact).
 
 from typing import List, Optional, Sequence, Tuple
 from PySide6.QtCore import Qt, QTimer, Signal
@@ -9,6 +9,7 @@ from PySide6.QtWidgets import (
     QHBoxLayout,
     QLabel,
     QPushButton,
+    QSizePolicy,
     QSlider,
     QSpinBox,
     QVBoxLayout,
@@ -18,19 +19,23 @@ from PySide6.QtWidgets import (
 
 class DimensionSliderWidget(QWidget):
     """
-    Dynamic Axis Selector (Row / Col) and interactive slice sliders for all other N-2 dimensions.
-    Includes auto-play / slice animation support.
+    Sleek, compact, and collapsible Dimension Scrubbing & Axis Mapping Widget.
+    Hugs its contents tightly without wasting vertical space.
     """
 
     slicingChanged = Signal(int, int, list)  # (row_axis, col_axis, slice_indices)
+    collapseToggled = Signal(bool)
 
     def __init__(self, parent: Optional[QWidget] = None):
         super().__init__(parent)
+        self.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Maximum)
+
         self._shape: Tuple[int, ...] = ()
         self._row_axis: int = 0
         self._col_axis: int = 1
         self._slice_indices: List[int] = []
-        self._dim_controls: List[Tuple[int, QSlider, QSpinBox]] = []
+        self._dim_controls: List[Tuple[int, QSlider, QSpinBox, QPushButton]] = []
+        self._is_collapsed = False
 
         # Auto-play animation timer
         self._play_timer = QTimer(self)
@@ -44,29 +49,81 @@ class DimensionSliderWidget(QWidget):
         self.main_layout.setContentsMargins(6, 4, 6, 4)
         self.main_layout.setSpacing(4)
 
-        # Top Bar: Axis Selectors
-        axis_bar = QFrame(self)
-        axis_layout = QHBoxLayout(axis_bar)
-        axis_layout.setContentsMargins(0, 0, 0, 0)
+        # Top Bar: Integrated Axis & Shape Control Frame
+        self.axis_bar = QFrame(self)
+        self.axis_bar.setObjectName("axisBar")
+        self.axis_bar.setStyleSheet("""
+            #axisBar {
+                background-color: #25272a;
+                border: 1px solid #393b40;
+                border-radius: 6px;
+                padding: 2px 6px;
+            }
+        """)
+        axis_layout = QHBoxLayout(self.axis_bar)
+        axis_layout.setContentsMargins(4, 2, 4, 2)
         axis_layout.setSpacing(8)
 
-        axis_layout.addWidget(QLabel("<b>Row Axis:</b>"))
-        self.row_combo = QComboBox(self)
+        # Shape Badge
+        self.shape_badge = QLabel("Shape: -", self.axis_bar)
+        self.shape_badge.setStyleSheet("""
+            background-color: #1e1f22;
+            color: #79a8ff;
+            font-family: "JetBrains Mono", monospace;
+            font-size: 11px;
+            font-weight: 600;
+            padding: 2px 8px;
+            border-radius: 4px;
+            border: 1px solid #3574f0;
+        """)
+        axis_layout.addWidget(self.shape_badge)
+
+        # Row Axis Selector
+        axis_layout.addWidget(QLabel("Row Axis:", self.axis_bar))
+        self.row_combo = QComboBox(self.axis_bar)
+        self.row_combo.setMinimumWidth(130)
         self.row_combo.currentIndexChanged.connect(self._on_axis_selection_changed)
         axis_layout.addWidget(self.row_combo)
 
-        axis_layout.addWidget(QLabel("<b>Column Axis:</b>"))
-        self.col_combo = QComboBox(self)
+        # Column Axis Selector
+        axis_layout.addWidget(QLabel("Column Axis:", self.axis_bar))
+        self.col_combo = QComboBox(self.axis_bar)
+        self.col_combo.setMinimumWidth(130)
         self.col_combo.currentIndexChanged.connect(self._on_axis_selection_changed)
         axis_layout.addWidget(self.col_combo)
 
+        # Swap Button
+        self.swap_btn = QPushButton("Swap", self.axis_bar)
+        self.swap_btn.setToolTip("Swap Row and Column axes (Transpose slice)")
+        self.swap_btn.setFixedWidth(50)
+        self.swap_btn.clicked.connect(self._on_swap_axes)
+        axis_layout.addWidget(self.swap_btn)
+
         axis_layout.addStretch()
-        self.main_layout.addWidget(axis_bar)
+
+        # Collapse / Expand Slicing Panel Button
+        self.collapse_btn = QPushButton("Collapse Sliders", self.axis_bar)
+        self.collapse_btn.setToolTip("Show / Hide slice sliders panel")
+        self.collapse_btn.setCheckable(True)
+        self.collapse_btn.setChecked(False)
+        self.collapse_btn.clicked.connect(self._toggle_collapse)
+        axis_layout.addWidget(self.collapse_btn)
+
+        self.main_layout.addWidget(self.axis_bar)
 
         # Sliders Container
-        self.sliders_container = QWidget(self)
+        self.sliders_container = QFrame(self)
+        self.sliders_container.setObjectName("slidersContainer")
+        self.sliders_container.setStyleSheet("""
+            #slidersContainer {
+                background-color: #212326;
+                border: 1px solid #33363a;
+                border-radius: 6px;
+                padding: 4px 6px;
+            }
+        """)
         self.sliders_layout = QVBoxLayout(self.sliders_container)
-        self.sliders_layout.setContentsMargins(0, 0, 0, 0)
+        self.sliders_layout.setContentsMargins(4, 4, 4, 4)
         self.sliders_layout.setSpacing(4)
         self.main_layout.addWidget(self.sliders_container)
 
@@ -76,24 +133,31 @@ class DimensionSliderWidget(QWidget):
         self._shape = tuple(int(x) for x in shape)
         ndim = len(self._shape)
 
+        # Format shape badge
+        if ndim == 0:
+            shape_str = "0D Scalar"
+        else:
+            shape_str = " x ".join(str(x) for x in self._shape)
+        self.shape_badge.setText(f"Shape: [{shape_str}]")
+
         self.row_combo.blockSignals(True)
         self.col_combo.blockSignals(True)
         self.row_combo.clear()
         self.col_combo.clear()
 
         if ndim == 0:
-            self.row_combo.addItem("Scalar [0D]")
-            self.col_combo.addItem("Scalar [0D]")
+            self.row_combo.addItem("Scalar")
+            self.col_combo.addItem("Scalar")
             self._row_axis = 0
             self._col_axis = 0
         elif ndim == 1:
-            self.row_combo.addItem(f"Axis 0 (Len: {self._shape[0]})")
+            self.row_combo.addItem(f"Axis 0 ({self._shape[0]})")
             self.col_combo.addItem("None (1D Vector)")
             self._row_axis = 0
             self._col_axis = 0
         else:
             for axis in range(ndim):
-                label = f"Axis {axis} (Dim: {self._shape[axis]})"
+                label = f"Axis {axis} ({self._shape[axis]})"
                 self.row_combo.addItem(label)
                 self.col_combo.addItem(label)
 
@@ -108,7 +172,6 @@ class DimensionSliderWidget(QWidget):
         self._rebuild_sliders()
 
     def _rebuild_sliders(self) -> None:
-        # Clear existing slider widgets
         while self.sliders_layout.count():
             item = self.sliders_layout.takeAt(0)
             widget = item.widget()
@@ -120,10 +183,12 @@ class DimensionSliderWidget(QWidget):
         if ndim <= 2:
             self._slice_indices = []
             self.sliders_container.setVisible(False)
+            self.collapse_btn.setVisible(False)
             self._emit_change()
             return
 
-        self.sliders_container.setVisible(True)
+        self.collapse_btn.setVisible(True)
+        self.sliders_container.setVisible(not self._is_collapsed)
         other_axes = [ax for ax in range(ndim) if ax != self._row_axis and ax != self._col_axis]
         self._slice_indices = [0] * len(other_axes)
 
@@ -131,39 +196,44 @@ class DimensionSliderWidget(QWidget):
             dim_size = self._shape[axis]
             max_idx = max(0, dim_size - 1)
 
-            row_widget = QFrame(self.sliders_container)
+            row_widget = QWidget(self.sliders_container)
             h_layout = QHBoxLayout(row_widget)
-            h_layout.setContentsMargins(0, 2, 0, 2)
+            h_layout.setContentsMargins(0, 1, 0, 1)
             h_layout.setSpacing(6)
 
-            lbl = QLabel(f"<b>Axis {axis}</b> [0..{max_idx}]:", row_widget)
+            lbl = QLabel(f"<b>Axis {axis}</b> (dim: {dim_size}):", row_widget)
             lbl.setMinimumWidth(110)
+            lbl.setStyleSheet("color: #bcbec4; font-size: 11px;")
             h_layout.addWidget(lbl)
 
-            prev_btn = QPushButton("◀", row_widget)
-            prev_btn.setFixedWidth(28)
+            prev_btn = QPushButton("<", row_widget)
+            prev_btn.setFixedWidth(24)
+            prev_btn.setFixedHeight(22)
             h_layout.addWidget(prev_btn)
 
             slider = QSlider(Qt.Orientation.Horizontal, row_widget)
             slider.setRange(0, max_idx)
             slider.setValue(0)
+            slider.setFixedHeight(20)
             h_layout.addWidget(slider)
 
-            next_btn = QPushButton("▶", row_widget)
-            next_btn.setFixedWidth(28)
+            next_btn = QPushButton(">", row_widget)
+            next_btn.setFixedWidth(24)
+            next_btn.setFixedHeight(22)
             h_layout.addWidget(next_btn)
 
             spin = QSpinBox(row_widget)
             spin.setRange(0, max_idx)
             spin.setValue(0)
-            spin.setFixedWidth(65)
+            spin.setFixedWidth(60)
+            spin.setFixedHeight(22)
             h_layout.addWidget(spin)
 
-            play_btn = QPushButton("Play ⏯", row_widget)
-            play_btn.setFixedWidth(60)
+            play_btn = QPushButton("Play", row_widget)
+            play_btn.setFixedWidth(46)
+            play_btn.setFixedHeight(22)
             h_layout.addWidget(play_btn)
 
-            # Connect controls
             def make_callbacks(s=slider, sp=spin, o_idx=idx_in_others, p_btn=play_btn, m_idx=max_idx):
                 def on_val_change(val):
                     s.blockSignals(True)
@@ -187,11 +257,11 @@ class DimensionSliderWidget(QWidget):
                 def on_play():
                     if self._play_timer.isActive() and self._playing_axis_idx == o_idx:
                         self._play_timer.stop()
-                        p_btn.setText("Play ⏯")
+                        p_btn.setText("Play")
                         self._playing_axis_idx = None
                     else:
                         self._playing_axis_idx = o_idx
-                        p_btn.setText("Stop ⏹")
+                        p_btn.setText("Stop")
                         self._play_timer.start(100)
 
                 return on_prev, on_next, on_play
@@ -201,16 +271,37 @@ class DimensionSliderWidget(QWidget):
             next_btn.clicked.connect(cb_next)
             play_btn.clicked.connect(cb_play)
 
-            self._dim_controls.append((axis, slider, spin))
+            self._dim_controls.append((axis, slider, spin, play_btn))
             self.sliders_layout.addWidget(row_widget)
 
         self._emit_change()
+
+    def _toggle_collapse(self) -> None:
+        self._is_collapsed = not self._is_collapsed
+        self.sliders_container.setVisible(not self._is_collapsed and len(self._shape) > 2)
+        self.collapse_btn.setText("Expand Sliders" if self._is_collapsed else "Collapse Sliders")
+        self.collapseToggled.emit(self._is_collapsed)
+
+    def _on_swap_axes(self) -> None:
+        if len(self._shape) < 2:
+            return
+        r = self.row_combo.currentIndex()
+        c = self.col_combo.currentIndex()
+        self.row_combo.blockSignals(True)
+        self.col_combo.blockSignals(True)
+        self.row_combo.setCurrentIndex(c)
+        self.col_combo.setCurrentIndex(r)
+        self.row_combo.blockSignals(False)
+        self.col_combo.blockSignals(False)
+        self._row_axis = c
+        self._col_axis = r
+        self._rebuild_sliders()
 
     def _on_play_tick(self) -> None:
         if self._playing_axis_idx is None or self._playing_axis_idx >= len(self._dim_controls):
             self._play_timer.stop()
             return
-        _, slider, _ = self._dim_controls[self._playing_axis_idx]
+        _, slider, _, _ = self._dim_controls[self._playing_axis_idx]
         val = slider.value() + 1
         if val > slider.maximum():
             val = 0
@@ -223,7 +314,6 @@ class DimensionSliderWidget(QWidget):
         r_idx = self.row_combo.currentIndex()
         c_idx = self.col_combo.currentIndex()
         if r_idx == c_idx:
-            # Shift column index to keep them distinct
             c_idx = (r_idx + 1) % ndim
             self.col_combo.blockSignals(True)
             self.col_combo.setCurrentIndex(c_idx)

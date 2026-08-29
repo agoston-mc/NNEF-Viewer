@@ -73,6 +73,43 @@ def test_dimension_slider_widget(qapp):
     assert slider_w._row_axis == 0
     assert slider_w._col_axis == 1
     assert len(slider_w._dim_controls) == 2  # axes 2 and 3
+    assert slider_w.sliders_container.isHidden() is False
+
+    # Test collapse
+    slider_w._toggle_collapse()
+    assert slider_w._is_collapsed is True
+    assert slider_w.sliders_container.isHidden() is True
+
+    # Test expand
+    slider_w._toggle_collapse()
+    assert slider_w._is_collapsed is False
+    assert slider_w.sliders_container.isHidden() is False
+
+    # Test Swap
+    slider_w._on_swap_axes()
+    assert slider_w._row_axis == 1
+    assert slider_w._col_axis == 0
+
+
+def test_linspace_stats_and_dialog(qapp):
+    from nnef_viewer.core.operations import generate_initial_data
+    from nnef_viewer.core.stats import compute_tensor_stats, compute_histogram
+
+    data = generate_initial_data((1, 3, 224, 224), np.float32, "linspace", {"start": 0.0, "stop": 1.0})
+    assert data.shape == (1, 3, 224, 224)
+    assert np.isclose(data.min(), 0.0)
+    assert np.isclose(data.max(), 1.0)
+
+    stats = compute_tensor_stats(data)
+    assert np.isclose(stats.min_val, 0.0)
+    assert np.isclose(stats.max_val, 1.0)
+    assert stats.max_val <= 1.0 + 1e-6
+
+    counts, edges, min_v, max_v = compute_histogram(data, num_bins=40)
+    assert np.isclose(min_v, 0.0)
+    assert np.isclose(max_v, 1.0)
+    assert np.all(edges >= 0.0 - 1e-6)
+    assert np.all(edges <= 1.0 + 1e-6)
 
 
 def test_embeddable_tensor_viewer_widget(qapp):
@@ -82,6 +119,12 @@ def test_embeddable_tensor_viewer_widget(qapp):
 
     assert viewer.table_model.rowCount() == 2
     assert viewer.table_model.columnCount() == 3
+
+    # Toggle slicing bar
+    viewer.toggle_slicing_btn.setChecked(False)
+    assert viewer.dimension_bar.isHidden() is True
+    viewer.toggle_slicing_btn.setChecked(True)
+    assert viewer.dimension_bar.isHidden() is False
 
 
 def test_diff_viewer_widget(qapp):

@@ -47,7 +47,7 @@ class CompareSetupDialog(QDialog):
         form_a.addRow("Open Tensor:", self.combo_a)
 
         h_a = QHBoxLayout()
-        self.browse_a_btn = QPushButton("📁 Browse File A...", group_a)
+        self.browse_a_btn = QPushButton("Browse File A...", group_a)
         self.browse_a_btn.clicked.connect(self._browse_a)
         h_a.addWidget(self.browse_a_btn)
         self.file_a_lbl = QLabel("", group_a)
@@ -67,7 +67,7 @@ class CompareSetupDialog(QDialog):
         form_b.addRow("Open Tensor:", self.combo_b)
 
         h_b = QHBoxLayout()
-        self.browse_b_btn = QPushButton("📁 Browse File B...", group_b)
+        self.browse_b_btn = QPushButton("Browse File B...", group_b)
         self.browse_b_btn.clicked.connect(self._browse_b)
         h_b.addWidget(self.browse_b_btn)
         self.file_b_lbl = QLabel("", group_b)

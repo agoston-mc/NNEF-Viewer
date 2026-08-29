@@ -1,10 +1,9 @@
 # Copyright (c) 2026
-# Embeddable NNEFTensorViewerWidget combining Matrix View, Slicing Sliders, and Stats.
+# Embeddable NNEFTensorViewerWidget combining Matrix View, Slicing Sliders, and Stats (Sleek & Resizable).
 
 from typing import Optional, Sequence
 import numpy as np
 from PySide6.QtCore import Qt, QThreadPool, Signal, Slot
-from PySide6.QtGui import QAction, QIcon
 from PySide6.QtWidgets import (
     QComboBox,
     QFrame,
@@ -12,6 +11,7 @@ from PySide6.QtWidgets import (
     QInputDialog,
     QLabel,
     QPushButton,
+    QSizePolicy,
     QSplitter,
     QToolBar,
     QVBoxLayout,
@@ -31,7 +31,7 @@ from .stats_panel import StatsPanel
 class NNEFTensorViewerWidget(QWidget):
     """
     Modular, embeddable PySide6 widget for viewing and editing a multi-dimensional NNEF tensor.
-    Can be instantiated standalone or embedded in any external Qt application.
+    Features a compact collapsible slicing panel, customizable heatmaps, and stats.
     """
 
     dataModified = Signal()
@@ -54,57 +54,91 @@ class NNEFTensorViewerWidget(QWidget):
 
     def _setup_ui(self) -> None:
         main_layout = QVBoxLayout(self)
-        main_layout.setContentsMargins(4, 4, 4, 4)
-        main_layout.setSpacing(4)
+        main_layout.setContentsMargins(6, 6, 6, 6)
+        main_layout.setSpacing(6)
 
-        # 1. Mini Top Toolbar
-        self.toolbar = QToolBar(self)
-        self.toolbar.setIconSize(self.toolbar.iconSize())
+        # 1. Top Container (Toolbar + Slicing Bar) with Maximum vertical constraint
+        self.top_container = QWidget(self)
+        self.top_container.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Maximum)
+        top_layout = QVBoxLayout(self.top_container)
+        top_layout.setContentsMargins(0, 0, 0, 0)
+        top_layout.setSpacing(4)
+
+        # Compact Modern Toolbar
+        self.toolbar_frame = QFrame(self.top_container)
+        self.toolbar_frame.setObjectName("viewerToolbar")
+        self.toolbar_frame.setStyleSheet("""
+            #viewerToolbar {
+                background-color: #2b2d30;
+                border: 1px solid #393b40;
+                border-radius: 6px;
+                padding: 2px 4px;
+            }
+        """)
+        tb_layout = QHBoxLayout(self.toolbar_frame)
+        tb_layout.setContentsMargins(4, 2, 4, 2)
+        tb_layout.setSpacing(6)
 
         # Undo / Redo
-        self.undo_btn = QPushButton("↶ Undo", self)
+        self.undo_btn = QPushButton("Undo", self.toolbar_frame)
         self.undo_btn.setToolTip("Undo last change (Ctrl+Z)")
         self.undo_btn.clicked.connect(self._on_undo)
-        self.toolbar.addWidget(self.undo_btn)
+        tb_layout.addWidget(self.undo_btn)
 
-        self.redo_btn = QPushButton("↷ Redo", self)
+        self.redo_btn = QPushButton("Redo", self.toolbar_frame)
         self.redo_btn.setToolTip("Redo last undone change (Ctrl+Y)")
         self.redo_btn.clicked.connect(self._on_redo)
-        self.toolbar.addWidget(self.redo_btn)
+        tb_layout.addWidget(self.redo_btn)
 
-        self.toolbar.addSeparator()
+        sep1 = QFrame(self.toolbar_frame)
+        sep1.setFrameShape(QFrame.Shape.VLine)
+        sep1.setFrameShadow(QFrame.Shadow.Sunken)
+        tb_layout.addWidget(sep1)
 
         # Jump to Coordinate
-        self.jump_btn = QPushButton("🔍 Jump to (r, c)...", self)
+        self.jump_btn = QPushButton("Jump to Cell...", self.toolbar_frame)
         self.jump_btn.clicked.connect(self._on_jump_to_coord)
-        self.toolbar.addWidget(self.jump_btn)
+        tb_layout.addWidget(self.jump_btn)
 
-        self.toolbar.addSeparator()
+        sep2 = QFrame(self.toolbar_frame)
+        sep2.setFrameShape(QFrame.Shape.VLine)
+        sep2.setFrameShadow(QFrame.Shadow.Sunken)
+        tb_layout.addWidget(sep2)
 
         # Display Format / Precision
-        self.toolbar.addWidget(QLabel(" Format: "))
-        self.format_combo = QComboBox(self)
+        tb_layout.addWidget(QLabel("Format:", self.toolbar_frame))
+        self.format_combo = QComboBox(self.toolbar_frame)
         self.format_combo.addItems(["General (%.5g)", "Scientific (%.4e)", "Fixed (%.2f)", "Fixed (%.6f)"])
         self.format_combo.currentIndexChanged.connect(self._on_format_changed)
-        self.toolbar.addWidget(self.format_combo)
+        tb_layout.addWidget(self.format_combo)
 
-        self.toolbar.addSeparator()
+        tb_layout.addStretch()
+
+        # Toggle Slicing Panel
+        self.toggle_slicing_btn = QPushButton("Slicing Bar", self.toolbar_frame)
+        self.toggle_slicing_btn.setCheckable(True)
+        self.toggle_slicing_btn.setChecked(True)
+        self.toggle_slicing_btn.toggled.connect(self._on_toggle_slicing)
+        tb_layout.addWidget(self.toggle_slicing_btn)
 
         # Toggle Stats Sidebar
-        self.toggle_stats_btn = QPushButton("📊 Toggle Stats", self)
+        self.toggle_stats_btn = QPushButton("Stats Panel", self.toolbar_frame)
         self.toggle_stats_btn.setCheckable(True)
         self.toggle_stats_btn.setChecked(True)
         self.toggle_stats_btn.toggled.connect(self._on_toggle_stats)
-        self.toolbar.addWidget(self.toggle_stats_btn)
+        tb_layout.addWidget(self.toggle_stats_btn)
 
-        main_layout.addWidget(self.toolbar)
+        top_layout.addWidget(self.toolbar_frame)
 
-        # 2. Dimension Scrubbing Bar
-        self.dimension_bar = DimensionSliderWidget(self)
-        main_layout.addWidget(self.dimension_bar)
+        # Dimension Scrubbing Bar
+        self.dimension_bar = DimensionSliderWidget(self.top_container)
+        top_layout.addWidget(self.dimension_bar)
 
-        # 3. Central Splitter: Matrix Table (Left) + Stats Panel (Right)
+        main_layout.addWidget(self.top_container, stretch=0)
+
+        # 2. Central Splitter: Matrix Table (Left) + Stats Panel (Right)
         self.splitter = QSplitter(Qt.Orientation.Horizontal, self)
+        self.splitter.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
 
         # Table Model & View
         self.table_model = TensorTableModel(self.doc, self.color_mapper, self)
@@ -116,11 +150,11 @@ class NNEFTensorViewerWidget(QWidget):
         self.stats_panel = StatsPanel(self.color_mapper, self.splitter)
         self.splitter.addWidget(self.stats_panel)
 
-        # Set initial splitter proportions (75% table, 25% stats)
-        self.splitter.setStretchFactor(0, 3)
+        # Proportions: 78% matrix view, 22% stats panel
+        self.splitter.setStretchFactor(0, 4)
         self.splitter.setStretchFactor(1, 1)
 
-        main_layout.addWidget(self.splitter)
+        main_layout.addWidget(self.splitter, stretch=1)
 
         self._update_undo_redo_state()
 
@@ -146,6 +180,9 @@ class NNEFTensorViewerWidget(QWidget):
         fmt = formats[index] if 0 <= index < len(formats) else "%.5g"
         self.table_model.float_format = fmt
         self.table_model.layoutChanged.emit()
+
+    def _on_toggle_slicing(self, checked: bool) -> None:
+        self.dimension_bar.setVisible(checked)
 
     def _on_toggle_stats(self, checked: bool) -> None:
         self.stats_panel.setVisible(checked)
@@ -195,7 +232,6 @@ class NNEFTensorViewerWidget(QWidget):
 
     def _trigger_async_stats(self) -> None:
         """Calculate global stats & histogram asynchronously in background worker."""
-        # For instant UI response, calculate local slice stats immediately
         if self.doc.size < 50_000:
             stats = compute_tensor_stats(self.doc.data)
             counts, edges, min_v, max_v = compute_histogram(self.doc.data)

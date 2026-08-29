@@ -86,17 +86,18 @@ class DistributionHistogramWidget(QWidget):
             painter.drawRect(QRectF(x, y, max(1.0, bar_w - 1.0), bar_h))
 
         # Bottom Axis & Labels
-        painter.setPen(QPen(QColor(80, 80, 80), 1))
+        painter.setPen(QPen(QColor(60, 63, 68), 1))
         painter.drawLine(padding_x, padding_top + chart_h, padding_x + chart_w, padding_top + chart_h)
 
-        font = QFont("JetBrains Mono, monospace", 9)
+        font = QFont("JetBrains Mono", 9)
         painter.setFont(font)
-        painter.setPen(QColor(160, 160, 160))
+        painter.setPen(QColor(160, 164, 172))
 
         min_str = f"{self.min_val:.4g}"
         max_str = f"{self.max_val:.4g}"
+        max_w = painter.fontMetrics().horizontalAdvance(max_str)
         painter.drawText(padding_x, h - 6, min_str)
-        painter.drawText(w - padding_x - 60, h - 6, max_str)
+        painter.drawText(int(w - padding_x - max_w), h - 6, max_str)
 
 
 class StatsPanel(QWidget):

@@ -192,21 +192,21 @@ def compute_histogram(
     if finite_data.size == 0:
         return np.zeros(num_bins, dtype=np.int64), np.linspace(0, 1, num_bins + 1), 0.0, 1.0
 
+    min_val = float(np.min(finite_data))
+    max_val = float(np.max(finite_data))
+
+    if min_val == max_val:
+        counts = np.zeros(num_bins, dtype=np.int64)
+        counts[num_bins // 2] = len(finite_data)
+        edges = np.linspace(min_val, max_val, num_bins + 1)
+        return counts, edges, min_val, max_val
+
     # Subsample if massive to keep GUI responsive
     if finite_data.size > max_sample_elements:
         idx = np.random.choice(finite_data.size, size=max_sample_elements, replace=False)
         data_to_bin = finite_data[idx]
     else:
         data_to_bin = finite_data
-
-    min_val = float(np.min(data_to_bin))
-    max_val = float(np.max(data_to_bin))
-
-    if min_val == max_val:
-        counts = np.zeros(num_bins, dtype=np.int64)
-        counts[num_bins // 2] = len(data_to_bin)
-        edges = np.linspace(min_val - 1.0, max_val + 1.0, num_bins + 1)
-        return counts, edges, min_val, max_val
 
     counts, edges = np.histogram(data_to_bin, bins=num_bins, range=(min_val, max_val))
     return counts, edges, min_val, max_val

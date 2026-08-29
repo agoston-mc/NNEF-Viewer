@@ -14,6 +14,7 @@ from PySide6.QtWidgets import (
     QLabel,
     QProgressBar,
     QPushButton,
+    QSizePolicy,
     QSplitter,
     QTabWidget,
     QVBoxLayout,
@@ -71,27 +72,42 @@ class NNEFDiffViewerWidget(QWidget):
         main_layout.setContentsMargins(6, 6, 6, 6)
         main_layout.setSpacing(6)
 
-        # 1. Top Bar: Tolerance Controls & Mismatch Navigation
-        top_bar = QFrame(self)
+        # 1. Top Container: Tolerance Controls, Mismatch Navigation & Slicing Bar
+        self.top_container = QWidget(self)
+        self.top_container.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Maximum)
+        top_c_layout = QVBoxLayout(self.top_container)
+        top_c_layout.setContentsMargins(0, 0, 0, 0)
+        top_c_layout.setSpacing(4)
+
+        top_bar = QFrame(self.top_container)
+        top_bar.setObjectName("diffTopBar")
+        top_bar.setStyleSheet("""
+            #diffTopBar {
+                background-color: #2b2d30;
+                border: 1px solid #393b40;
+                border-radius: 6px;
+                padding: 2px 6px;
+            }
+        """)
         top_layout = QHBoxLayout(top_bar)
-        top_layout.setContentsMargins(4, 4, 4, 4)
+        top_layout.setContentsMargins(4, 2, 4, 2)
         top_layout.setSpacing(8)
 
-        top_layout.addWidget(QLabel("<b>Absolute Tolerance (atol):</b>"))
+        top_layout.addWidget(QLabel("Absolute Tol (atol):", top_bar))
         self.atol_spin = QDoubleSpinBox(top_bar)
         self.atol_spin.setDecimals(8)
         self.atol_spin.setRange(0.0, 1e6)
         self.atol_spin.setValue(1e-5)
         top_layout.addWidget(self.atol_spin)
 
-        top_layout.addWidget(QLabel("<b>Relative Tolerance (rtol):</b>"))
+        top_layout.addWidget(QLabel("Relative Tol (rtol):", top_bar))
         self.rtol_spin = QDoubleSpinBox(top_bar)
         self.rtol_spin.setDecimals(8)
         self.rtol_spin.setRange(0.0, 1e6)
         self.rtol_spin.setValue(1e-5)
         top_layout.addWidget(self.rtol_spin)
 
-        self.recompute_btn = QPushButton("🔄 Recompute Diff", top_bar)
+        self.recompute_btn = QPushButton("Recompute Diff", top_bar)
         self.recompute_btn.clicked.connect(self._trigger_recompute_diff)
         top_layout.addWidget(self.recompute_btn)
 
@@ -101,33 +117,35 @@ class NNEFDiffViewerWidget(QWidget):
         top_layout.addWidget(sep)
 
         # Mismatch Navigation
-        self.prev_mismatch_btn = QPushButton("⏮ Prev Mismatch", top_bar)
+        self.prev_mismatch_btn = QPushButton("Prev Mismatch", top_bar)
         self.prev_mismatch_btn.clicked.connect(self._on_prev_mismatch)
         top_layout.addWidget(self.prev_mismatch_btn)
 
         self.mismatch_status_lbl = QLabel("No diff computed", top_bar)
-        self.mismatch_status_lbl.setStyleSheet("font-weight: bold; color: #3574f0;")
+        self.mismatch_status_lbl.setStyleSheet("font-weight: 600; color: #79a8ff; font-family: monospace;")
         top_layout.addWidget(self.mismatch_status_lbl)
 
-        self.next_mismatch_btn = QPushButton("Next Mismatch ⏭", top_bar)
+        self.next_mismatch_btn = QPushButton("Next Mismatch", top_bar)
         self.next_mismatch_btn.clicked.connect(self._on_next_mismatch)
         top_layout.addWidget(self.next_mismatch_btn)
 
         top_layout.addStretch()
-        main_layout.addWidget(top_bar)
+        top_c_layout.addWidget(top_bar)
 
         # Progress bar
-        self.progress_bar = QProgressBar(self)
+        self.progress_bar = QProgressBar(self.top_container)
         self.progress_bar.setRange(0, 0)
-        self.progress_bar.setFixedHeight(8)
+        self.progress_bar.setFixedHeight(6)
         self.progress_bar.setVisible(False)
-        main_layout.addWidget(self.progress_bar)
+        top_c_layout.addWidget(self.progress_bar)
 
         # 2. Shared Dimension Slider Bar
-        self.dimension_bar = DimensionSliderWidget(self)
+        self.dimension_bar = DimensionSliderWidget(self.top_container)
         self.dimension_bar.set_shape(self.doc_a.shape)
         self.dimension_bar.slicingChanged.connect(self._on_slicing_changed)
-        main_layout.addWidget(self.dimension_bar)
+        top_c_layout.addWidget(self.dimension_bar)
+
+        main_layout.addWidget(self.top_container, stretch=0)
 
         # 3. Main Display Tabs: Side-by-Side vs Difference Matrix vs Metrics
         self.tabs = QTabWidget(self)
@@ -310,11 +328,11 @@ class NNEFDiffViewerWidget(QWidget):
 
         # Update status
         if result.mismatch_count == 0:
-            self.mismatch_status_lbl.setText("✓ 100% Match within tolerance!")
-            self.mismatch_status_lbl.setStyleSheet("font-weight: bold; color: #2e7d32;")
+            self.mismatch_status_lbl.setText("Match (within tolerance)")
+            self.mismatch_status_lbl.setStyleSheet("font-weight: 600; color: #4caf50; font-family: monospace;")
         else:
             self.mismatch_status_lbl.setText(f"{result.mismatch_count:,} Mismatches ({result.mismatch_pct:.2f}%)")
-            self.mismatch_status_lbl.setStyleSheet("font-weight: bold; color: #c62828;")
+            self.mismatch_status_lbl.setStyleSheet("font-weight: 600; color: #f44336; font-family: monospace;")
 
         # Update highlights
         self._on_slicing_changed(
@@ -361,7 +379,7 @@ class NNEFDiffViewerWidget(QWidget):
         for idx_in_others, ax in enumerate(other_axes):
             val = coord[ax]
             if idx_in_others < len(self.dimension_bar._dim_controls):
-                _, s, sp = self.dimension_bar._dim_controls[idx_in_others]
+                _, s, sp, *_ = self.dimension_bar._dim_controls[idx_in_others]
                 s.setValue(val)
                 sp.setValue(val)
 

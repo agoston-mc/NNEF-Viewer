@@ -45,7 +45,7 @@ class TransformDialog(QDialog):
             "Clamp [min, max]",
             "Zero Threshold (|x| < eps -> 0)",
             "Normalize Min-Max [0, 1]",
-            "Normalize Standard (Z-Score μ=0, σ=1)",
+            "Normalize Standard (Z-Score Mean=0, Std=1)",
             "Custom NumPy Expression (e.g. sin(x) + 0.5)",
         ])
         self.op_combo.currentIndexChanged.connect(self._on_op_changed)
