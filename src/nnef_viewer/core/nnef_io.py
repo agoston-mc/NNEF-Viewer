@@ -1,15 +1,16 @@
-# Copyright (c) 2026
-# Fully compliant NNEF binary tensor I/O reader/writer and converter.
-
 import io
 import os
 import sys
 import tarfile
 import zipfile
-from typing import BinaryIO, List, Optional, Tuple, Union
+from typing import BinaryIO, Dict, List, Optional, Tuple, Union
 
 import numpy as np
 
+try:
+    import nnef
+except ImportError:
+    nnef = None
 
 class ItemType:
     FLOAT = 0
@@ -110,20 +111,6 @@ def _fromfile(file: BinaryIO, dtype: np.dtype, count: int) -> np.ndarray:
     return data
 
 
-def write_nnef_tensor(
-    file_or_path: Union[str, BinaryIO],
-    tensor: np.ndarray,
-    quantized: bool = False,
-    version: Tuple[int, int] = (1, 0),
-) -> None:
-    """Write a NumPy array to an NNEF binary file according to Khronos NNEF specification."""
-    if isinstance(file_or_path, str):
-        with open(file_or_path, "wb") as f:
-            _write_tensor_to_stream(f, tensor, quantized=quantized, version=version)
-    else:
-        _write_tensor_to_stream(file_or_path, tensor, quantized=quantized, version=version)
-
-
 def _write_tensor_to_stream(
     file: BinaryIO,
     tensor: np.ndarray,
@@ -163,16 +150,63 @@ def _write_tensor_to_stream(
     _tofile(data, file)
 
 
+def write_nnef_tensor(
+    file_or_path: Union[str, BinaryIO],
+    tensor: np.ndarray,
+    quantized: bool = False,
+    version: Tuple[int, int] = (1, 0),
+) -> None:
+    """Write a NumPy array to an NNEF binary file, delegating to official nnef module when available."""
+    if isinstance(file_or_path, str):
+        with open(file_or_path, "wb") as f:
+            if nnef is not None:
+                nnef.write_tensor(f, tensor, quantized=quantized, version=version)
+            else:
+                _write_tensor_to_stream(f, tensor, quantized=quantized, version=version)
+    else:
+        # If it has a real fileno and nnef is available, use nnef directly
+        if nnef is not None and hasattr(file_or_path, "fileno"):
+            try:
+                file_or_path.fileno()
+                nnef.write_tensor(file_or_path, tensor, quantized=quantized, version=version)
+                return
+            except (io.UnsupportedOperation, AttributeError):
+                pass
+        _write_tensor_to_stream(file_or_path, tensor, quantized=quantized, version=version)
+
+
 def read_nnef_tensor(
     file_or_path: Union[str, BinaryIO],
     return_quantization: bool = False,
 ) -> Union[np.ndarray, Tuple[np.ndarray, bool]]:
-    """Read an NNEF binary file and return the NumPy tensor."""
+    """Read an NNEF binary file, delegating to official nnef module when available."""
     if isinstance(file_or_path, str):
         with open(file_or_path, "rb") as f:
-            return _read_tensor_from_stream(f, return_quantization=return_quantization)
+            if nnef is not None:
+                return nnef.read_tensor(f, return_quantization=return_quantization)
+            else:
+                return _read_tensor_from_stream(f, return_quantization=return_quantization)
     else:
+        if nnef is not None and hasattr(file_or_path, "fileno"):
+            try:
+                file_or_path.fileno()
+                return nnef.read_tensor(file_or_path, return_quantization=return_quantization)
+            except (io.UnsupportedOperation, AttributeError):
+                pass
         return _read_tensor_from_stream(file_or_path, return_quantization=return_quantization)
+
+
+def load_nnef_graph_variables(path: str) -> Dict[str, np.ndarray]:
+    """Load all variable tensors from an NNEF graph directory using official nnef parser."""
+    if nnef is None:
+        raise ImportError("The 'nnef' package is required to parse NNEF graph folders")
+
+    graph = nnef.load_graph(path, load_variables=True)
+    results = {}
+    for name, tensor in graph.tensors.items():
+        if tensor.data is not None:
+            results[name] = tensor.data
+    return results
 
 
 def _read_tensor_from_stream(

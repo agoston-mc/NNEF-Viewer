@@ -56,10 +56,55 @@ wheels = [
 ]
 
 [[package]]
+name = "nnef"
+version = "1.0.10"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "numpy", version = "2.0.2", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.10'" },
+    { name = "numpy", version = "2.2.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version == '3.10.*'" },
+    { name = "numpy", version = "2.4.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version == '3.11.*'" },
+    { name = "numpy", version = "2.5.2", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.12'" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/53/86/88a199efac37705bc39df02f7c480d0a72bf7ac9b191c596cee39f431173/nnef-1.0.10.tar.gz", hash = "sha256:c358e1d67671d5e17d21b02d092684ac6a4264e0cd678f2e745479b2a5602190", size = 81312, upload-time = "2026-03-05T15:21:55.399Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/ea/88/55079e8845b1edc973ef16a7788e0cde82e1b97a40138177dc4faafd3a07/nnef-1.0.10-cp310-cp310-macosx_11_0_arm64.whl", hash = "sha256:afe1d1da5c41826f365d507df89cb14ec3d5163641c4bcb3f8068bb0b1386572", size = 443823, upload-time = "2026-03-05T15:21:05.602Z" },
+    { url = "https://files.pythonhosted.org/packages/7d/58/1f4c1618515ac593d56a09b1e4e0a6ac53732f1c0196690e8179f861f874/nnef-1.0.10-cp310-cp310-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:c3a9ce70f1588817bbc6d1136c840bfb644ca64c54db1e2940970a405f78d790", size = 4445650, upload-time = "2026-03-05T15:21:07.129Z" },
+    { url = "https://files.pythonhosted.org/packages/4b/01/e00b0b2632ec08183580c218cb0703d98519447361e816ea980b4fe167eb/nnef-1.0.10-cp310-cp310-musllinux_1_2_x86_64.whl", hash = "sha256:1d2ff0e672c077d2a581e17b4badb1fe6ca8aec28c6ee10748623860ef332e09", size = 5434732, upload-time = "2026-03-05T15:21:08.815Z" },
+    { url = "https://files.pythonhosted.org/packages/33/2b/53019ad056b63a6d78751d0cf7a1c46ed0d810cc137164af030ad8a6988e/nnef-1.0.10-cp310-cp310-win32.whl", hash = "sha256:ff343cf75a7a54b27c3caa43e149d82ccdbbe9cd216ef15145390789bf1403ea", size = 312575, upload-time = "2026-03-05T15:21:10.261Z" },
+    { url = "https://files.pythonhosted.org/packages/4c/37/ad07fd7c336b34a6473df45215914aba20d286be14adf166858f9ac422bc/nnef-1.0.10-cp310-cp310-win_amd64.whl", hash = "sha256:f79cae4b21207b81104103e2d7e4c99b480ab5928f804f6f0453f9520baaeeaf", size = 362691, upload-time = "2026-03-05T15:21:11.585Z" },
+    { url = "https://files.pythonhosted.org/packages/d9/bb/137b6d4e436b839f6501643523e8aa1a626010b77a46d58fdfe52600328b/nnef-1.0.10-cp311-cp311-macosx_11_0_arm64.whl", hash = "sha256:5f87e664b9d1c9b4cf16144d756b7e66097b2f8966b32b8bbae6f3cbab20ff63", size = 443841, upload-time = "2026-03-05T15:21:12.866Z" },
+    { url = "https://files.pythonhosted.org/packages/97/34/5c8a71a353c70732d0b70dfb51184c990e6738143d6ea6ddb3fcf0b4702e/nnef-1.0.10-cp311-cp311-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:3015cfd319c5da9b46ea1fa65df5664f9d5970686e5f68f74fc510e83b88d78d", size = 4445853, upload-time = "2026-03-05T15:21:14.023Z" },
+    { url = "https://files.pythonhosted.org/packages/ea/fd/d49ceb5f98bdd39dda27a205f6fd61eedfdbc708613d88c38cb77f8f3e46/nnef-1.0.10-cp311-cp311-musllinux_1_2_x86_64.whl", hash = "sha256:97d36d1a6bf22eef9bdc010d9730928d3dc3ada784a31d322a6c1317c4e1743c", size = 5435053, upload-time = "2026-03-05T15:21:15.297Z" },
+    { url = "https://files.pythonhosted.org/packages/04/bd/a03bfa8450fdae83b13ed0b8fa0004c19b2f4e587b2f0fe05c334170ca03/nnef-1.0.10-cp311-cp311-win32.whl", hash = "sha256:108626bcfbbc1bab1f7d674c9678998fe1e2ab8ca0b4ab0860236bba6bcc7107", size = 312556, upload-time = "2026-03-05T15:21:16.45Z" },
+    { url = "https://files.pythonhosted.org/packages/7a/c9/5768e6318e91d25a410cb13efca362d469a7cf9c0d93f169711d8f76e5ba/nnef-1.0.10-cp311-cp311-win_amd64.whl", hash = "sha256:64df09f287dcacf6fb136e1680a4456dee92c0177977f4806ca706a3d0558416", size = 362692, upload-time = "2026-03-05T15:21:17.769Z" },
+    { url = "https://files.pythonhosted.org/packages/1e/54/df87956b6e707e1c2db04c2a3176986d2cadff5d374ef1569903d4e93464/nnef-1.0.10-cp312-cp312-macosx_11_0_arm64.whl", hash = "sha256:fc4342fe1ecf39a33571f0fa408750720eb24542b0e9e5eb09e4b27aaac92a14", size = 443830, upload-time = "2026-03-05T15:21:20.031Z" },
+    { url = "https://files.pythonhosted.org/packages/d6/f1/fe96bae4483f2f0146f3dbdbcbb0e725af795eb9c7ed6cc486451e26709e/nnef-1.0.10-cp312-cp312-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:23aa97375b719f6ff81415ad09ffb19c15cb3e90400889dd38d52a638bbfbe32", size = 4455280, upload-time = "2026-03-05T15:21:21.555Z" },
+    { url = "https://files.pythonhosted.org/packages/be/58/5a9cb48b308e7377245bf23b3c22b33f28ccb485c0249ffcc9dc0dfa971b/nnef-1.0.10-cp312-cp312-musllinux_1_2_x86_64.whl", hash = "sha256:6268fc0ac8cd8d5de923eeeb5d581bb8ceb8435c3abf646b28bb69f0767304fa", size = 5439167, upload-time = "2026-03-05T15:21:22.982Z" },
+    { url = "https://files.pythonhosted.org/packages/af/91/f92c0da929aec294a2339ce30103ecd1e64851e7c47d752f8f2bea6340d7/nnef-1.0.10-cp312-cp312-win32.whl", hash = "sha256:4a68859f59e7143c62b297179f4c91d1df2b765577a26667b70d514087d1db67", size = 312574, upload-time = "2026-03-05T15:21:24.309Z" },
+    { url = "https://files.pythonhosted.org/packages/ef/20/83eb2820329d1717f0d72992ca096f19553307355276afee4613afc02452/nnef-1.0.10-cp312-cp312-win_amd64.whl", hash = "sha256:270aa5ce0f84ec2b1aaf4c18495f3d6b055b91c1e2d8e96f91b2e502fc817e44", size = 362743, upload-time = "2026-03-05T15:21:25.191Z" },
+    { url = "https://files.pythonhosted.org/packages/c5/1a/23519e029ebda0766bc8f90adcfbec8a39c87ab6cdbdb6ebfde98860ad7d/nnef-1.0.10-cp313-cp313-macosx_11_0_arm64.whl", hash = "sha256:7b2d3334b1a1394c9ef4131e4be118e4bb4fac38c58b3e291407d0b52d1ccc0f", size = 443832, upload-time = "2026-03-05T15:21:26.244Z" },
+    { url = "https://files.pythonhosted.org/packages/f5/1f/f44de8d44ab62091d6f65b841d15aa629b1b83afb788d5c34039e002eb95/nnef-1.0.10-cp313-cp313-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:faed1f2a454ee483a5b8a03029ebb92d02caceb489b15119f89ba67dc1a5ed30", size = 4455197, upload-time = "2026-03-05T15:21:29.291Z" },
+    { url = "https://files.pythonhosted.org/packages/b7/c5/cd4d71425ec54102fe52955318f74feef03edd823a0a0ab6014c710085df/nnef-1.0.10-cp313-cp313-musllinux_1_2_x86_64.whl", hash = "sha256:529132d35ea2326097afe926cae1c852caf9a3ba8a8ec0dd1bab2389a325e2c1", size = 5438993, upload-time = "2026-03-05T15:21:30.875Z" },
+    { url = "https://files.pythonhosted.org/packages/91/99/b7f1ede402cd6a0dc927b608f30865112df07db3236e5922d4480e5c59d2/nnef-1.0.10-cp313-cp313-win32.whl", hash = "sha256:087f3f88e293c045758ef1b2172e511aaa6b254818ba5673969fa37d9a004f49", size = 312583, upload-time = "2026-03-05T15:21:32.221Z" },
+    { url = "https://files.pythonhosted.org/packages/c4/d0/fdf6b41b0dcea77b2de2e79561acd252a7d8718b8bbfff593a7ef28b153d/nnef-1.0.10-cp313-cp313-win_amd64.whl", hash = "sha256:198a6c88477ed67248c58cbfb567677a10bfe3766812186e33db9c89fbdbde01", size = 362749, upload-time = "2026-03-05T15:21:33.404Z" },
+    { url = "https://files.pythonhosted.org/packages/d7/f0/dd4319324dc4546f48c91ff0149640d47fbd237f372e91ec7698eaef4f54/nnef-1.0.10-cp314-cp314-macosx_11_0_arm64.whl", hash = "sha256:a5270ce2395f2ae3e9e152615feb33abf3ae70e84543b489e361de0ed55490ae", size = 443770, upload-time = "2026-03-05T15:21:35.025Z" },
+    { url = "https://files.pythonhosted.org/packages/d4/98/c8ee4ad5298c0805ef337cd2c29521c31cb1baf9bd487eaae363049bad9c/nnef-1.0.10-cp314-cp314-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:8b212efb544822b99ad95f382178f16c4d8252cad94bba4539032a70c70a5806", size = 4455441, upload-time = "2026-03-05T15:21:36.519Z" },
+    { url = "https://files.pythonhosted.org/packages/c1/15/2f7b9a7b4a5d67904581014ec928fa1fc32bc068d4347e1e6587fc29d98d/nnef-1.0.10-cp314-cp314-musllinux_1_2_x86_64.whl", hash = "sha256:3851a79d665fbfa2efa323242d64e941b9ebbaae882f5de1b35bbf97575a57ab", size = 5438767, upload-time = "2026-03-05T15:21:38.133Z" },
+    { url = "https://files.pythonhosted.org/packages/21/27/0a6913d68bd39b93e6385488e7f139d8d068b0f7f2d8fe2c04decaae0b13/nnef-1.0.10-cp314-cp314-win32.whl", hash = "sha256:a24686cd3fd48fa5c9a3529fdd01b4b5bbedd1e31854fd872053de8a388172f2", size = 317530, upload-time = "2026-03-05T15:21:39.75Z" },
+    { url = "https://files.pythonhosted.org/packages/87/e8/7d02068a1dc958b8a8633bb0f7374bdd61bb4959522795afd1551208f9a3/nnef-1.0.10-cp314-cp314-win_amd64.whl", hash = "sha256:6cab58547495cf35bef81902d8e6c170e475af89b962c6bd2d846bb494163fe1", size = 369910, upload-time = "2026-03-05T15:21:41.069Z" },
+    { url = "https://files.pythonhosted.org/packages/4d/2a/a53b60addbefe75dbaa30b2a75db494b9792e7258220e95aa9ef67a3aae0/nnef-1.0.10-cp39-cp39-macosx_11_0_arm64.whl", hash = "sha256:44b95b51522b9903c7521e5eaf3bdbbceef491100c849a40da7daf359c9b8144", size = 443820, upload-time = "2026-03-05T15:21:48.495Z" },
+    { url = "https://files.pythonhosted.org/packages/d0/13/27a15b91a5e44863e0f4220e5a4fa75d5857afe53622872a732273f81c57/nnef-1.0.10-cp39-cp39-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:f200f4e899880a2e75419ab209e8b76b0fecabc1036029a8eeca9fb5f6a40749", size = 4442938, upload-time = "2026-03-05T15:21:50.043Z" },
+    { url = "https://files.pythonhosted.org/packages/0f/4a/9890e46e3db85ffb3d09234f5622fc2595e5fbc9039315aa089a927f7d13/nnef-1.0.10-cp39-cp39-musllinux_1_2_x86_64.whl", hash = "sha256:af7b838af9aee3cba3f95b22649f4f11ac22aefd943faace251cd53105fe4057", size = 5437692, upload-time = "2026-03-05T15:21:51.314Z" },
+    { url = "https://files.pythonhosted.org/packages/2c/69/c82c3e6d45e279261a5d2192caf0059e00d70a3ece4ae81abb626c254231/nnef-1.0.10-cp39-cp39-win32.whl", hash = "sha256:e61fb0088553072f6c552b01dd9b77da1414d82e602b070c19596a3bcf825c00", size = 312519, upload-time = "2026-03-05T15:21:53.059Z" },
+    { url = "https://files.pythonhosted.org/packages/03/e5/2dc9fb1bccf0c8f21b019645727e44e4b8a8c21205a0f66d6c02ce5297cc/nnef-1.0.10-cp39-cp39-win_amd64.whl", hash = "sha256:128dfa0563c37ec0ff0eb2daf0cd09c89d4039f5dbaa1abc5e607187571828b9", size = 362730, upload-time = "2026-03-05T15:21:54.194Z" },
+]
+
+[[package]]
 name = "nnef-viewer"
 version = "0.1.0"
 source = { editable = "." }
 dependencies = [
+    { name = "nnef" },
     { name = "numpy", version = "2.0.2", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.10'" },
     { name = "numpy", version = "2.2.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version == '3.10.*'" },
     { name = "numpy", version = "2.4.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version == '3.11.*'" },
@@ -77,6 +122,7 @@ dev = [
 
 [package.metadata]
 requires-dist = [
+    { name = "nnef", specifier = ">=0.6.0" },
     { name = "numpy", specifier = ">=1.22.0" },
     { name = "pyside6", specifier = ">=6.5.0" },
     { name = "pytest", marker = "extra == 'dev'", specifier = ">=7.0.0" },

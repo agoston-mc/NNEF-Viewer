@@ -7,6 +7,7 @@ requires-python = ">=3.9"
 dependencies = [
     "numpy>=1.22.0",
     "pyside6>=6.5.0",
+    "nnef>=0.6.0",
 ]
 
 [project.optional-dependencies]
