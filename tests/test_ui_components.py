@@ -68,11 +68,11 @@ def test_tensor_table_model(qapp):
 
 def test_dimension_slider_widget(qapp):
     slider_w = DimensionSliderWidget()
-    # 4D tensor shape
+    # 4D tensor shape [4, 8, 16, 32] -> Defaults to H=Axis 2, W=Axis 3
     slider_w.set_shape([4, 8, 16, 32])
-    assert slider_w._row_axis == 0
-    assert slider_w._col_axis == 1
-    assert len(slider_w._dim_controls) == 2  # axes 2 and 3
+    assert slider_w._row_axis == 2
+    assert slider_w._col_axis == 3
+    assert len(slider_w._dim_controls) == 2  # axes 0 and 1
     assert slider_w.sliders_container.isHidden() is False
 
     # Test collapse
@@ -87,8 +87,8 @@ def test_dimension_slider_widget(qapp):
 
     # Test Swap
     slider_w._on_swap_axes()
-    assert slider_w._row_axis == 1
-    assert slider_w._col_axis == 0
+    assert slider_w._row_axis == 3
+    assert slider_w._col_axis == 2
 
 
 def test_linspace_stats_and_dialog(qapp):
@@ -113,12 +113,13 @@ def test_linspace_stats_and_dialog(qapp):
 
 
 def test_embeddable_tensor_viewer_widget(qapp):
+    # Shape [2, 3, 4, 5] -> Last two dimensions H=4, W=5
     arr = np.random.randn(2, 3, 4, 5).astype(np.float32)
     doc = NNEFTensorDocument(arr, display_name="test_4d.dat")
     viewer = NNEFTensorViewerWidget(doc)
 
-    assert viewer.table_model.rowCount() == 2
-    assert viewer.table_model.columnCount() == 3
+    assert viewer.table_model.rowCount() == 4
+    assert viewer.table_model.columnCount() == 5
 
     # Toggle slicing bar
     viewer.toggle_slicing_btn.setChecked(False)
@@ -137,17 +138,127 @@ def test_diff_viewer_widget(qapp):
     assert diff_widget.tabs.count() == 3
 
 
-def test_main_window_lifecycle(qapp):
+def test_main_window_lifecycle_and_duplication(qapp):
     window = MainWindow()
-    assert window.tab_widget.count() >= 1
+    # Startup opens to blank welcome page
+    assert window.tab_widget.count() == 0
+    assert window.stack.currentIndex() == 0
 
     # Add a new document tab
-    doc = NNEFTensorDocument(np.zeros((10, 10)), display_name="sample.dat")
+    doc = NNEFTensorDocument(np.zeros((10, 10)), file_path="/fake/path/tensor.dat", display_name="tensor.dat")
     window.add_tensor_document_tab(doc)
-    assert window.tab_widget.count() >= 2
+    assert window.tab_widget.count() == 1
+    assert window.stack.currentIndex() == 1
+
+    # Prevent duplicate open: try opening same path again
+    window.open_file("/fake/path/tensor.dat")
+    assert window.tab_widget.count() == 1
+
+    # Duplicate tensor into new tab
+    window.duplicate_current_tensor()
+    assert window.tab_widget.count() == 2
+    assert "tensor_copy" in window.tab_widget.tabText(1)
 
     # Toggle theme
     window._toggle_theme()
     assert window._is_dark_theme is False
     window._toggle_theme()
     assert window._is_dark_theme is True
+
+
+def test_unsaved_changes_and_settings_dialogs(qapp):
+    from nnef_viewer.ui.dialogs.unsaved_changes_dialog import UnsavedChangesDialog, UnsavedChoice
+    from nnef_viewer.ui.dialogs.settings_dialog import SettingsDialog
+    from nnef_viewer.core.settings import AppSettings
+
+    settings = AppSettings.get_instance()
+    settings.reset_defaults()
+
+    # Test UnsavedChangesDialog
+    dlg = UnsavedChangesDialog("my_weights.dat")
+    assert dlg.doc_name == "my_weights.dat"
+    dlg.remember_chk.setChecked(True)
+    dlg._select_choice(UnsavedChoice.SAVE_AND_CLOSE)
+    assert dlg.choice == UnsavedChoice.SAVE_AND_CLOSE
+    assert settings.get("silence_unsaved_dialog") is True
+    assert settings.get("unsaved_close_action") == "save_and_close"
+
+    # Test SettingsDialog
+    settings_dlg = SettingsDialog()
+    settings_dlg.unsaved_action_combo.setCurrentIndex(settings_dlg.unsaved_action_combo.findData("always_discard"))
+    settings_dlg.theme_combo.setCurrentIndex(settings_dlg.theme_combo.findData("light"))
+    settings_dlg._save_and_accept()
+
+    assert settings.get("default_theme") == "light"
+    settings.reset_defaults()
+
+
+def test_axis_swapping_preserves_outer_dimensions(qapp):
+    slider_w = DimensionSliderWidget()
+    # 4D tensor shape [4, 10, 32, 64] -> defaults to H=Axis 2, W=Axis 3; outer: Axis 0 (size 4), Axis 1 (size 10)
+    slider_w.set_shape([4, 10, 32, 64])
+    assert slider_w._row_axis == 2
+    assert slider_w._col_axis == 3
+
+    # Set outer dimension slider for Axis 1 (Channel) to 3, and Axis 0 (Batch) to 2
+    controls = slider_w._dim_controls
+    assert len(controls) == 2
+    # controls[0] is Axis 0, controls[1] is Axis 1
+    axis0, slider0, spin0, _ = controls[0]
+    axis1, slider1, spin1, _ = controls[1]
+    assert axis0 == 0 and axis1 == 1
+
+    slider0.setValue(2)
+    slider1.setValue(3)
+    assert slider_w._slice_indices == [2, 3]
+
+    # Swap H and W (Axis 2 <-> Axis 3)
+    slider_w._on_swap_axes()
+    assert slider_w._row_axis == 3
+    assert slider_w._col_axis == 2
+
+    # Outer dimensions (Axis 0 and Axis 1) must be preserved
+    assert slider_w._slice_indices == [2, 3]
+    new_controls = slider_w._dim_controls
+    assert new_controls[0][1].value() == 2
+    assert new_controls[1][1].value() == 3
+
+
+def test_status_bar_restores_tensor_info(qapp):
+    window = MainWindow()
+    doc = NNEFTensorDocument(np.ones((2, 3, 4), dtype=np.float32), display_name="weights.dat")
+    window.add_tensor_document_tab(doc)
+
+    assert "weights.dat" in window.status_bar.currentMessage()
+    assert "float32" in window.status_bar.currentMessage()
+
+    # Simulate temporary message
+    window.status_bar.showMessage("Temporary alert", 2000)
+    assert window.status_bar.currentMessage() == "Temporary alert"
+
+    # Clear temporary message (simulating timeout)
+    window.status_bar.clearMessage()
+    assert "weights.dat" in window.status_bar.currentMessage()
+    assert "float32" in window.status_bar.currentMessage()
+
+
+def test_generate_quant_stats_data_accuracy():
+    from nnef_viewer.core.operations import generate_quant_stats_data, generate_initial_data
+
+    shape = (1, 3, 64, 64)
+    min_v, max_v, mean_v, std_v = -4.0, 8.0, 1.5, 2.5
+    data = generate_quant_stats_data(shape, np.float32, min_v, max_v, mean_v, std_v)
+
+    assert data.shape == shape
+    assert np.isclose(data.min(), min_v, atol=1e-5)
+    assert np.isclose(data.max(), max_v, atol=1e-5)
+    assert np.isclose(data.mean(), mean_v, atol=1e-4)
+    assert np.isclose(data.std(), std_v, atol=1e-3)
+
+    # Test through generate_initial_data
+    params = {"min": min_v, "max": max_v, "mean": mean_v, "std": std_v}
+    data2 = generate_initial_data(shape, np.float32, init_type="quant_stats", params=params)
+    assert np.isclose(data2.min(), min_v, atol=1e-5)
+    assert np.isclose(data2.max(), max_v, atol=1e-5)
+    assert np.isclose(data2.mean(), mean_v, atol=1e-4)
+    assert np.isclose(data2.std(), std_v, atol=1e-3)

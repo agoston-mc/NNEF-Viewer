@@ -121,10 +121,10 @@ class NNEFTensorViewerWidget(QWidget):
         self.toggle_slicing_btn.toggled.connect(self._on_toggle_slicing)
         tb_layout.addWidget(self.toggle_slicing_btn)
 
-        # Toggle Stats Sidebar
+        # Toggle Stats Sidebar (Hidden by default)
         self.toggle_stats_btn = QPushButton("Stats Panel", self.toolbar_frame)
         self.toggle_stats_btn.setCheckable(True)
-        self.toggle_stats_btn.setChecked(True)
+        self.toggle_stats_btn.setChecked(False)
         self.toggle_stats_btn.toggled.connect(self._on_toggle_stats)
         tb_layout.addWidget(self.toggle_stats_btn)
 
@@ -146,8 +146,9 @@ class NNEFTensorViewerWidget(QWidget):
         self.table_view.setModel(self.table_model)
         self.splitter.addWidget(self.table_view)
 
-        # Stats Panel
+        # Stats Panel (Hidden by default)
         self.stats_panel = StatsPanel(self.color_mapper, self.splitter)
+        self.stats_panel.setVisible(False)
         self.splitter.addWidget(self.stats_panel)
 
         # Proportions: 78% matrix view, 22% stats panel

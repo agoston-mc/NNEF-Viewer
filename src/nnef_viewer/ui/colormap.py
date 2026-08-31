@@ -1,5 +1,5 @@
 # Copyright (c) 2026
-# JetBrains-style matrix heatmaps, colormaps, normalization, and automatic text contrast.
+# Refined matrix heatmaps, adaptive contrast colormaps, and accurate WCAG text contrast.
 
 from typing import Dict, List, Optional, Tuple
 import numpy as np
@@ -24,19 +24,23 @@ def _interpolate_color_stops(stops: List[Tuple[float, Tuple[int, int, int]]], n_
     return lut
 
 
-# JetBrains-inspired Colormaps (Diverging & Sequential)
+# Refined, minimal colormaps
 _COLORMAP_STOPS: Dict[str, List[Tuple[float, Tuple[int, int, int]]]] = {
     "Coolwarm (Blue-Red)": [
-        (0.0, (59, 76, 192)),     # Blue
-        (0.25, (137, 168, 237)),  # Light Blue
+        (0.0, (59, 76, 192)),     # Smooth Blue
+        (0.25, (137, 168, 237)),  # Soft Periwinkle
         (0.5, (221, 221, 221)),   # Neutral Light Grey
-        (0.75, (244, 154, 123)),  # Light Coral
-        (1.0, (180, 4, 38)),      # Deep Red
+        (0.75, (244, 154, 123)),  # Soft Coral
+        (1.0, (180, 4, 38)),      # Rich Crimson
     ],
-    "Seismic": [
-        (0.0, (0, 0, 180)),
-        (0.5, (255, 255, 255)),
-        (1.0, (180, 0, 0)),
+    "Adaptive Contrast (Inverted)": [
+        (0.0, (30, 32, 36)),      # Dark charcoal
+        (0.5, (90, 110, 145)),    # Muted steel blue
+        (1.0, (230, 238, 248)),   # High-luminance soft white
+    ],
+    "Grayscale": [
+        (0.0, (25, 25, 25)),
+        (1.0, (240, 240, 240)),
     ],
     "Viridis": [
         (0.0, (68, 1, 84)),
@@ -44,47 +48,6 @@ _COLORMAP_STOPS: Dict[str, List[Tuple[float, Tuple[int, int, int]]]] = {
         (0.5, (33, 145, 140)),
         (0.75, (94, 201, 98)),
         (1.0, (253, 231, 37)),
-    ],
-    "Plasma": [
-        (0.0, (13, 8, 135)),
-        (0.25, (126, 3, 168)),
-        (0.5, (204, 71, 120)),
-        (0.75, (248, 149, 64)),
-        (1.0, (240, 249, 33)),
-    ],
-    "Magma": [
-        (0.0, (0, 0, 4)),
-        (0.25, (81, 18, 124)),
-        (0.5, (182, 54, 121)),
-        (0.75, (251, 136, 97)),
-        (1.0, (252, 253, 191)),
-    ],
-    "Jet": [
-        (0.0, (0, 0, 143)),
-        (0.15, (0, 0, 255)),
-        (0.4, (0, 255, 255)),
-        (0.65, (255, 255, 0)),
-        (0.85, (255, 0, 0)),
-        (1.0, (128, 0, 0)),
-    ],
-    "Blues": [
-        (0.0, (247, 251, 255)),
-        (0.5, (107, 174, 214)),
-        (1.0, (8, 48, 107)),
-    ],
-    "Reds": [
-        (0.0, (255, 245, 240)),
-        (0.5, (251, 106, 74)),
-        (1.0, (103, 0, 13)),
-    ],
-    "Grayscale": [
-        (0.0, (30, 30, 30)),
-        (1.0, (240, 240, 240)),
-    ],
-    "Diff Highlight": [
-        (0.0, (46, 125, 50)),     # Green (Match)
-        (0.1, (245, 124, 0)),    # Orange (Minor Diff)
-        (1.0, (198, 40, 40)),     # Red (Major Diff)
     ],
 }
 
@@ -99,10 +62,16 @@ AVAILABLE_COLORMAPS: List[str] = list(COLORMAP_LUTS.keys())
 class ColorMapper:
     """Computes background colors and high-contrast text foreground colors for matrix cells."""
 
-    def __init__(self, colormap_name: str = "Coolwarm (Blue-Red)", opacity: float = 0.85):
+    def __init__(
+        self,
+        colormap_name: str = "Coolwarm (Blue-Red)",
+        opacity: float = 0.85,
+        is_dark_mode: bool = True,
+    ):
         self.colormap_name = colormap_name if colormap_name in COLORMAP_LUTS else "Coolwarm (Blue-Red)"
         self.opacity = max(0.0, min(1.0, opacity))
         self.enabled = True
+        self.is_dark_mode = is_dark_mode
         self.lut = COLORMAP_LUTS[self.colormap_name]
 
     def set_colormap(self, name: str) -> None:
@@ -113,6 +82,9 @@ class ColorMapper:
     def set_opacity(self, opacity: float) -> None:
         self.opacity = max(0.0, min(1.0, opacity))
 
+    def set_theme_mode(self, is_dark_mode: bool) -> None:
+        self.is_dark_mode = is_dark_mode
+
     def map_value(
         self,
         value: float,
@@ -122,22 +94,21 @@ class ColorMapper:
     ) -> Tuple[Optional[QColor], Optional[QColor]]:
         """
         Maps a scalar numeric value to (QColor_background, QColor_foreground).
-        Handles NaNs, Infs, and zero-centered diverging ranges.
+        Computes accurate blended luminance for perfect WCAG contrast.
         """
         if not self.enabled:
             return None, None
 
         if np.isnan(value):
-            # Amber warning for NaN
-            bg = QColor(255, 179, 0, int(200 * self.opacity))
+            bg = QColor(255, 179, 0, int(220 * self.opacity))
             return bg, QColor(0, 0, 0)
 
         if np.isposinf(value):
-            bg = QColor(156, 39, 176, int(200 * self.opacity))
+            bg = QColor(142, 36, 170, int(220 * self.opacity))
             return bg, QColor(255, 255, 255)
 
         if np.isneginf(value):
-            bg = QColor(106, 27, 154, int(200 * self.opacity))
+            bg = QColor(106, 27, 154, int(220 * self.opacity))
             return bg, QColor(255, 255, 255)
 
         if zero_centered:
@@ -145,7 +116,6 @@ class ColorMapper:
             if abs_max == 0:
                 t = 0.5
             else:
-                # Map [-abs_max, +abs_max] to [0.0, 1.0] with 0 at 0.5
                 t = (value + abs_max) / (2.0 * abs_max)
         else:
             rng = v_max - v_min
@@ -161,8 +131,14 @@ class ColorMapper:
         alpha = int(255 * self.opacity)
         bg_color = QColor(r, g, b, alpha)
 
-        # WCAG Relative Luminance calculation for crisp readability
-        luminance = 0.299 * r + 0.587 * g + 0.114 * b
-        fg_color = QColor(255, 255, 255) if luminance < 135 else QColor(15, 15, 15)
+        # Calculate blended perceived luminance against the table theme background
+        base_bg = (30, 31, 34) if self.is_dark_mode else (255, 255, 255)
+        eff_r = r * self.opacity + base_bg[0] * (1.0 - self.opacity)
+        eff_g = g * self.opacity + base_bg[1] * (1.0 - self.opacity)
+        eff_b = b * self.opacity + base_bg[2] * (1.0 - self.opacity)
+
+        # WCAG Relative Luminance
+        rel_luminance = (0.299 * eff_r + 0.587 * eff_g + 0.114 * eff_b) / 255.0
+        fg_color = QColor(245, 247, 250) if rel_luminance < 0.52 else QColor(16, 18, 20)
 
         return bg_color, fg_color

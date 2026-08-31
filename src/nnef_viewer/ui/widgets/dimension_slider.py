@@ -34,6 +34,7 @@ class DimensionSliderWidget(QWidget):
         self._row_axis: int = 0
         self._col_axis: int = 1
         self._slice_indices: List[int] = []
+        self._axis_values: dict = {}
         self._dim_controls: List[Tuple[int, QSlider, QSpinBox, QPushButton]] = []
         self._is_collapsed = False
 
@@ -127,8 +128,8 @@ class DimensionSliderWidget(QWidget):
         self.sliders_layout.setSpacing(4)
         self.main_layout.addWidget(self.sliders_container)
 
-    def set_shape(self, shape: Sequence[int], preferred_row: int = 0, preferred_col: int = 1) -> None:
-        """Update tensor shape and regenerate dimension controls."""
+    def set_shape(self, shape: Sequence[int], preferred_row: Optional[int] = None, preferred_col: Optional[int] = None) -> None:
+        """Update tensor shape and regenerate dimension controls, defaulting to last 2 axes (H, W)."""
         self._play_timer.stop()
         self._shape = tuple(int(x) for x in shape)
         ndim = len(self._shape)
@@ -156,6 +157,11 @@ class DimensionSliderWidget(QWidget):
             self._row_axis = 0
             self._col_axis = 0
         else:
+            if preferred_row is None:
+                preferred_row = max(0, ndim - 2)
+            if preferred_col is None:
+                preferred_col = max(0, ndim - 1)
+
             for axis in range(ndim):
                 label = f"Axis {axis} ({self._shape[axis]})"
                 self.row_combo.addItem(label)
@@ -195,6 +201,10 @@ class DimensionSliderWidget(QWidget):
         for idx_in_others, axis in enumerate(other_axes):
             dim_size = self._shape[axis]
             max_idx = max(0, dim_size - 1)
+            # Restore previous coordinate for this axis
+            saved_val = max(0, min(self._axis_values.get(axis, 0), max_idx))
+            self._slice_indices[idx_in_others] = saved_val
+            self._axis_values[axis] = saved_val
 
             row_widget = QWidget(self.sliders_container)
             h_layout = QHBoxLayout(row_widget)
@@ -213,7 +223,7 @@ class DimensionSliderWidget(QWidget):
 
             slider = QSlider(Qt.Orientation.Horizontal, row_widget)
             slider.setRange(0, max_idx)
-            slider.setValue(0)
+            slider.setValue(saved_val)
             slider.setFixedHeight(20)
             h_layout.addWidget(slider)
 
@@ -224,7 +234,7 @@ class DimensionSliderWidget(QWidget):
 
             spin = QSpinBox(row_widget)
             spin.setRange(0, max_idx)
-            spin.setValue(0)
+            spin.setValue(saved_val)
             spin.setFixedWidth(60)
             spin.setFixedHeight(22)
             h_layout.addWidget(spin)
@@ -234,7 +244,7 @@ class DimensionSliderWidget(QWidget):
             play_btn.setFixedHeight(22)
             h_layout.addWidget(play_btn)
 
-            def make_callbacks(s=slider, sp=spin, o_idx=idx_in_others, p_btn=play_btn, m_idx=max_idx):
+            def make_callbacks(s=slider, sp=spin, o_idx=idx_in_others, p_btn=play_btn, m_idx=max_idx, ax=axis):
                 def on_val_change(val):
                     s.blockSignals(True)
                     sp.blockSignals(True)
@@ -243,6 +253,7 @@ class DimensionSliderWidget(QWidget):
                     s.blockSignals(False)
                     sp.blockSignals(False)
                     self._slice_indices[o_idx] = val
+                    self._axis_values[ax] = val
                     self._emit_change()
 
                 s.valueChanged.connect(on_val_change)

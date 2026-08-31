@@ -60,6 +60,12 @@ def generate_initial_data(
             return np.empty(shape_tuple, dtype=dt)
         arr = np.linspace(start, stop, count)
         return arr.reshape(shape_tuple).astype(dt)
+    elif init_type == "quant_stats":
+        min_v = float(params.get("min", -1.0))
+        max_v = float(params.get("max", 1.0))
+        mean_v = float(params.get("mean", 0.0))
+        std_v = float(params.get("std", 0.5))
+        return generate_quant_stats_data(shape_tuple, dt, min_v, max_v, mean_v, std_v)
     elif init_type == "eye":
         if len(shape_tuple) == 2:
             return np.eye(shape_tuple[0], shape_tuple[1], dtype=dt)
@@ -73,6 +79,89 @@ def generate_initial_data(
             return arr
     else:
         return np.zeros(shape_tuple, dtype=dt)
+
+
+def generate_quant_stats_data(
+    shape: Sequence[int],
+    dtype: Union[np.dtype, str],
+    min_val: float = -1.0,
+    max_val: float = 1.0,
+    mean_val: float = 0.0,
+    std_val: float = 0.5,
+    max_iters: int = 300,
+) -> np.ndarray:
+    """
+    Generate synthetic tensor data precisely satisfying target quantitative statistics:
+    minimum, maximum, empirical mean, and standard deviation.
+    """
+    dt = np.dtype(dtype)
+    shape_tuple = tuple(int(x) for x in shape)
+    n = int(np.prod(shape_tuple)) if shape_tuple else 1
+    if n == 0:
+        return np.empty(shape_tuple, dtype=dt)
+    if n == 1:
+        return np.full(shape_tuple, mean_val, dtype=dt)
+
+    min_val = float(min_val)
+    max_val = float(max_val)
+    mean_val = float(mean_val)
+    std_val = float(std_val)
+
+    if min_val > max_val:
+        min_val, max_val = max_val, min_val
+    if min_val == max_val:
+        return np.full(shape_tuple, min_val, dtype=dt)
+
+    # Bound mean and maximum theoretical standard deviation
+    mean_val = float(np.clip(mean_val, min_val, max_val))
+    max_std = float(np.sqrt(max(0.0, (mean_val - min_val) * (max_val - mean_val))))
+    std_val = float(np.clip(std_val, 1e-7, max(1e-7, max_std)))
+
+    target_sum = n * mean_val
+    target_sq_sum = n * (std_val**2 + mean_val**2)
+
+    n_free = n - 2
+    if n_free == 0:
+        arr = np.array([min_val, max_val], dtype=dt)
+        return arr.reshape(shape_tuple)
+
+    rem_sum = target_sum - min_val - max_val
+    rem_sq = target_sq_sum - min_val**2 - max_val**2
+    rem_mean = rem_sum / n_free
+    rem_var = max(0.0, (rem_sq / n_free) - rem_mean**2)
+    rem_std = np.sqrt(rem_var)
+
+    # Generate initial free elements
+    if rem_std > 1e-7:
+        z = np.random.randn(n_free)
+        z_std = float(np.std(z))
+        if z_std > 1e-7:
+            z = (z - np.mean(z)) / z_std
+        y = rem_mean + rem_std * z
+
+        for _ in range(max_iters):
+            y = np.clip(y, min_val, max_val)
+            curr_s = float(np.std(y))
+            if curr_s < 1e-7:
+                break
+            y = rem_mean + (rem_std / curr_s) * (y - np.mean(y))
+            if np.all(y >= min_val - 1e-6) and np.all(y <= max_val + 1e-6):
+                break
+    else:
+        y = np.full(n_free, rem_mean)
+
+    y = np.clip(y, min_val, max_val)
+    full = np.concatenate([[min_val, max_val], y])
+    np.random.shuffle(full)
+
+    if np.issubdtype(dt, np.integer):
+        arr = np.round(full).astype(dt)
+        arr[0] = int(round(min_val))
+        arr[1] = int(round(max_val))
+        np.random.shuffle(arr)
+        return arr.reshape(shape_tuple)
+    else:
+        return full.reshape(shape_tuple).astype(dt)
 
 
 def apply_math_transform(doc: NNEFTensorDocument, op_type: str, params: Dict[str, Any]) -> None:

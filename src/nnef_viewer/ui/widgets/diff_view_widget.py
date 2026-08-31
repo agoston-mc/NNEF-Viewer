@@ -61,7 +61,7 @@ class NNEFDiffViewerWidget(QWidget):
 
         self._color_mapper_a = ColorMapper("Coolwarm (Blue-Red)")
         self._color_mapper_b = ColorMapper("Coolwarm (Blue-Red)")
-        self._color_mapper_diff = ColorMapper("Diff Highlight")
+        self._color_mapper_diff = ColorMapper("Coolwarm (Blue-Red)")
 
         self._setup_ui()
         self._sync_scrollbars()
